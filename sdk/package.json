@@ -1,15 +1,16 @@
 {
-  "name": "@sentinel/sdk",
+  "name": "@sentinel-protocol/sdk",
   "version": "0.1.0",
-  "description": "Sentinel SDK — one-line policy enforcement for Solana AI agents",
+  "description": "Sentinel SDK — policy enforcement for Solana AI agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.30.1",
+    "@coral-xyz/anchor": "^0.31.1",
     "@solana/web3.js": "^1.95.0",
+    "@anthropic-ai/sdk": "^0.27.0",
     "bn.js": "^5.2.1"
   }
 }

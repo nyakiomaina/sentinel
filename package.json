@@ -2,17 +2,20 @@
   "name": "sentinel-workspace",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["sdk", "ai", "demo"],
+  "workspaces": ["sdk", "cli"],
   "scripts": {
     "build": "pnpm -r build",
-    "test": "anchor test",
+    "test": "anchor test --validator legacy",
     "lint": "eslint ."
   },
   "devDependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@solana/web3.js": "^1.95.0",
     "@types/bn.js": "^5.1.5",
     "@types/chai": "^4.3.16",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.12.7",
+    "bn.js": "^5.2.1",
     "chai": "^4.4.1",
     "mocha": "^10.4.0",
     "prettier": "^3.2.5",

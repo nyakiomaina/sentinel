@@ -1,5 +1,6 @@
 [toolchain]
-anchor_version = "0.30.1"
+anchor_version = "0.31.1"
+package_manager = "pnpm"
 
 [features]
 resolution = true
@@ -11,11 +12,8 @@ sentinel = "14u1yjdjLfn8cfAwBd5e6Av4fdG1sKifhJXAv1XVworo"
 [programs.devnet]
 sentinel = "14u1yjdjLfn8cfAwBd5e6Av4fdG1sKifhJXAv1XVworo"
 
-[registry]
-url = "https://api.apr.dev"
-
 [provider]
-cluster = "Localnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

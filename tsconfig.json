@@ -12,5 +12,5 @@
     "moduleResolution": "node",
     "outDir": "dist"
   },
-  "include": ["sdk/src", "ai/src", "demo/src", "tests"]
+  "include": ["sdk/src", "cli/src", "tests"]
 }
