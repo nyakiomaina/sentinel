@@ -17,12 +17,10 @@ pub mod sentinel {
         ctx: Context<InitializeGuardrail>,
         params: InitializeParams,
     ) -> Result<()> {
-        // TODO: create a new `Policy` PDA for `agent_wallet` with the requested limits/whitelist.
         instructions::initialize::initialize_guardrail(ctx, params)
     }
 
     pub fn update_policy(ctx: Context<UpdatePolicy>, params: UpdateParams) -> Result<()> {
-        // TODO: owner-only update to a policy; apply only provided fields and emit `PolicyUpdated`.
         instructions::update_policy::update_policy(ctx, params)
     }
 
@@ -31,15 +29,22 @@ pub mod sentinel {
         amount_lamports: u64,
         target_program: Pubkey,
     ) -> Result<()> {
-        // TODO: enforce the policy check order and emit `TransactionApproved` or `TransactionBlocked`.
         instructions::execute_guarded::execute_guarded(ctx, amount_lamports, target_program)
+    }
+
+    pub fn create_escalation(
+        ctx: Context<CreateEscalation>,
+        amount_lamports: u64,
+        target_program: Pubkey,
+        seed_timestamp: i64,
+    ) -> Result<()> {
+        instructions::create_escalation::create_escalation(ctx, amount_lamports, target_program, seed_timestamp)
     }
 
     pub fn approve_escalation(
         ctx: Context<ApproveEscalation>,
         approved: bool,
     ) -> Result<()> {
-        // TODO: owner resolves an escalation request and emits `EscalationResolved`.
         instructions::approve_escalation::approve_escalation(ctx, approved)
     }
 }

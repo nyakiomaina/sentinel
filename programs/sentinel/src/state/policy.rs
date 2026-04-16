@@ -1,4 +1,7 @@
 use anchor_lang::prelude::*;
+use crate::errors::SentinelError;
+
+pub const MAX_WHITELISTED_PROGRAMS: usize = 20;
 
 /// On-chain policy account that governs what a specific AI agent wallet is
 /// allowed to do.
@@ -17,23 +20,24 @@ pub struct Policy {
 }
 
 impl Policy {
-    pub const fn space() -> usize {
-        // NOTE: this is a conservative size estimate for a variable-length Vec.
-        // Business logic and precise sizing will be finalized in Phase 2.
-        8  // discriminator
-        + 32 // owner
-        + 32 // agent_wallet
-        + 8  // max_tx_lamports
-        + 8  // max_hourly_lamports
-        + 8  // spent_this_hour
-        + 8  // hour_window_start
-        + 4 + (32 * 32) // whitelisted_programs (assume up to 32 entries for now)
-        + 8  // escalation_threshold_lamports
-        + 1  // is_active
-        + 1  // bump
-    }
+    pub const SPACE: usize =
+        8   // discriminator
+        + 32  // owner
+        + 32  // agent_wallet
+        + 8   // max_tx_lamports
+        + 8   // max_hourly_lamports
+        + 8   // spent_this_hour
+        + 8   // hour_window_start
+        + 4 + (32 * MAX_WHITELISTED_PROGRAMS) // whitelisted_programs
+        + 8   // escalation_threshold_lamports
+        + 1   // is_active
+        + 1;  // bump
 
     pub fn validate(&self) -> Result<()> {
+        require!(
+            self.whitelisted_programs.len() <= MAX_WHITELISTED_PROGRAMS,
+            SentinelError::TooManyPrograms
+        );
         Ok(())
     }
 }

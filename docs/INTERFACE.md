@@ -36,6 +36,36 @@ export interface Policy {
 }
 ```
 
+## EscalationRequest account (on-chain state)
+
+```rust
+// Rust — programs/sentinel/src/state/escalation.rs
+pub struct EscalationRequest {
+    pub policy: Pubkey,           // the Policy this belongs to
+    pub agent_wallet: Pubkey,     // the agent who triggered it
+    pub amount_lamports: u64,     // the amount that needs approval
+    pub target_program: Pubkey,   // intended CPI target
+    pub created_at: i64,          // on-chain clock timestamp
+    pub is_resolved: bool,        // owner has acted
+    pub was_approved: bool,       // true = approved, false = rejected
+    pub bump: u8,                 // PDA bump seed
+}
+```
+
+```typescript
+// TypeScript mirror — sdk/src/types.ts
+export interface EscalationRequest {
+  policy: PublicKey
+  agentWallet: PublicKey
+  amountLamports: BN
+  targetProgram: PublicKey
+  createdAt: BN
+  isResolved: boolean
+  wasApproved: boolean
+  bump: number
+}
+```
+
 ## PDA derivation
 
 ```
@@ -68,22 +98,52 @@ Emits:     PolicyUpdated
 ### `execute_guarded`
 
 ```
-Accounts:  agent (Signer, must match policy.agent_wallet),
-           policy (mut), clock (Sysvar<Clock>),
-           escalation (init_if_needed)
+Accounts:  agent (Signer, must match policy.agent_wallet via PDA seeds),
+           policy (mut), clock (Sysvar<Clock>)
 Params:    amount_lamports: u64, target_program: Pubkey
 
 Check order (strictly in this sequence):
   1. policy.is_active == true               → else PolicyInactive
-  2. target_program in whitelisted_programs → else ProgramNotWhitelisted
-  3. amount > escalation_threshold          → create EscalationRequest, EscalationRequired
-  4. amount > max_tx_lamports               → SpendingLimitExceeded
-  5. if clock.unix_timestamp > hour_window_start + 3600 → reset counter
-  6. spent_this_hour + amount > max_hourly  → HourlyLimitExceeded
-  7. update spent_this_hour += amount
-  8. emit TransactionApproved
+  2. amount_lamports > 0                    → else InvalidAmount
+  3. target_program in whitelisted_programs → else ProgramNotWhitelisted
+  4. amount > escalation_threshold          → EscalationRequired
+  5. amount > max_tx_lamports               → SpendingLimitExceeded
+  6. if clock.unix_timestamp > hour_window_start + 3600 → reset counter
+  7. spent_this_hour + amount > max_hourly  → HourlyLimitExceeded
+  8. update spent_this_hour += amount
+  9. emit TransactionApproved
 
-On any error: emit TransactionBlocked { reason: error_string }
+On any rejection: emit TransactionBlocked { reason } BEFORE returning error.
+All u64 arithmetic uses checked_add (overflow returns InvalidAmount).
+
+Note: execute_guarded does NOT create an EscalationRequest PDA.
+When EscalationRequired is returned, the client should call
+create_escalation as a separate transaction.
+```
+
+### `create_escalation`
+
+```
+Accounts:  agent (Signer, mut, payer),
+           policy (PDA seeds: ["policy", agent]),
+           escalation (Account<EscalationRequest>, init, PDA),
+           system_program, clock (Sysvar<Clock>)
+Params:    amount_lamports: u64, target_program: Pubkey, seed_timestamp: i64
+
+PDA seeds: ["escalation", policy.key(), &seed_timestamp.to_le_bytes()]
+  - seed_timestamp is client-provided for PDA derivation (use current blockTime)
+  - created_at on the account is set from on-chain Clock, not the client timestamp
+
+Validates: policy.is_active, amount > escalation_threshold
+Success:   EscalationRequest PDA created
+Emits:     EscalationCreated
+
+Client flow:
+  1. Call execute_guarded → get EscalationRequired error
+  2. Get current blockTime from cluster
+  3. Derive escalation PDA: ["escalation", policyPda, blockTime_le_bytes]
+  4. Call create_escalation(amount, target_program, blockTime)
+  5. Owner later calls approve_escalation to resolve
 ```
 
 ### `approve_escalation`

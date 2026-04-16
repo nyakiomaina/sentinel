@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
-use crate::state::Policy;
+use crate::errors::SentinelError;
+use crate::events::PolicyUpdated;
+use crate::state::{Policy, MAX_WHITELISTED_PROGRAMS};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct InitializeParams {
@@ -19,7 +21,7 @@ pub struct InitializeGuardrail<'info> {
     #[account(
         init,
         payer = owner,
-        space = Policy::space(),
+        space = Policy::SPACE,
         seeds = [b"policy", agent_wallet.key().as_ref()],
         bump,
     )]
@@ -29,8 +31,28 @@ pub struct InitializeGuardrail<'info> {
 }
 
 pub fn initialize_guardrail(ctx: Context<InitializeGuardrail>, params: InitializeParams) -> Result<()> {
-    // TODO: initialize the `Policy` PDA with the provided policy config fields.
-    // TODO: set `owner`, `agent_wallet`, and `bump`.
-    // TODO: validate invariants via `Policy::validate()`.
+    require!(
+        params.whitelisted_programs.len() <= MAX_WHITELISTED_PROGRAMS,
+        SentinelError::TooManyPrograms
+    );
+
+    let policy = &mut ctx.accounts.policy;
+    policy.owner = ctx.accounts.owner.key();
+    policy.agent_wallet = ctx.accounts.agent_wallet.key();
+    policy.max_tx_lamports = params.max_tx_lamports;
+    policy.max_hourly_lamports = params.max_hourly_lamports;
+    policy.whitelisted_programs = params.whitelisted_programs;
+    policy.escalation_threshold_lamports = params.escalation_threshold_lamports;
+    policy.spent_this_hour = 0;
+    policy.hour_window_start = 0;
+    policy.is_active = true;
+    policy.bump = ctx.bumps.policy;
+
+    emit!(PolicyUpdated {
+        owner: policy.owner,
+        agent: policy.agent_wallet,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+
     Ok(())
 }
